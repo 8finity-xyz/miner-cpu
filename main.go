@@ -7,6 +7,7 @@ import (
 	"infinity/miner/internal/submitter"
 	"infinity/miner/internal/utils"
 	"log/slog"
+	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -42,7 +43,7 @@ type Solution struct {
 }
 
 func main() {
-	const N = 10
+	N := runtime.NumCPU()
 
 	submitter := submitter.NewSubmitter()
 	problems := make(chan listener.Problem)
