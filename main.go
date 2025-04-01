@@ -6,12 +6,14 @@ import (
 	"infinity/miner/internal/solver"
 	"infinity/miner/internal/submitter"
 	"infinity/miner/internal/utils"
+	"log"
 	"log/slog"
 	"runtime"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/joho/godotenv"
 )
 
 func worker(problemCh <-chan *listener.Problem, solutionCh chan<- Solution) {
@@ -44,6 +46,11 @@ type Solution struct {
 
 func main() {
 	N := runtime.NumCPU()
+
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	submitter := submitter.NewSubmitter()
 	problems := make(chan listener.Problem)

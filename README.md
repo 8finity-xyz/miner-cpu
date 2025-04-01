@@ -1,6 +1,9 @@
 # How to run
 
 1. Install go - https://go.dev
+
+2. Clone repo with miner - `git@github.com:8finity-xyz/protocol.git`
+
 2. Install dependencies
 ```sh
 go install
