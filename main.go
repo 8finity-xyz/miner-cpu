@@ -66,11 +66,11 @@ func main() {
 		}
 	}()
 
-	var currentProblemNonce big.Int
+	var currentProblemNonce *big.Int
 	for {
 		select {
 		case problem := <-problems:
-			currentProblemNonce = *problem.Nonce
+			currentProblemNonce = problem.Nonce
 			slog.Info("Got new problem", "difficulty", common.BigToAddress(problem.Difficulty))
 			for _, solver := range solvers {
 				go func() {
@@ -78,7 +78,7 @@ func main() {
 				}()
 			}
 		case solution := <-solutionCh:
-			if solution.Nonce.Cmp(&currentProblemNonce) != 0 {
+			if solution.Nonce.Cmp(currentProblemNonce) != 0 {
 				continue
 			}
 
@@ -87,7 +87,10 @@ func main() {
 				"Submitting solution",
 				"solution", crypto.PubkeyToAddress(privateKeyAB.PublicKey),
 			)
-			submitter.Submit(solution.PrivateKeyB, *privateKeyAB)
+			isNextProblem := submitter.Submit(solution.PrivateKeyB, *privateKeyAB)
+			if isNextProblem {
+				currentProblemNonce = big.NewInt(-1)
+			}
 		}
 	}
 }

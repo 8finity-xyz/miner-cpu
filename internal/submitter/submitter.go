@@ -47,6 +47,7 @@ func NewSubmitter(conn *ethclient.Client) *Submitter {
 		log.Fatal(err)
 	}
 	submitterAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+	slog.Info("Submitter", "address", submitterAddress)
 
 	nonce, err := conn.PendingNonceAt(context.Background(), submitterAddress)
 	if err != nil {
@@ -131,7 +132,7 @@ func (s *Submitter) Submit(privateKeyB ecdsa.PrivateKey, privateKeyAB ecdsa.Priv
 	slog.Debug("Submission transaction sended", "tx", tx.Hash())
 
 	receipt, err := waitForTransactionReceipt(context.Background(), s.conn, tx.Hash())
-	if err != nil || receipt.Status == types.ReceiptStatusSuccessful {
+	if err != nil || receipt.Status == types.ReceiptStatusFailed {
 		return true
 	}
 
