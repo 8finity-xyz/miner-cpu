@@ -22,7 +22,9 @@ type Solution struct {
 }
 
 type Solver struct {
-	ProblemCh chan PoW.PoWNewProblem
+	ProblemCh    chan PoW.PoWNewProblem
+	NumTries     uint64
+	NumSolutions uint64
 }
 
 func NewSolver() *Solver {
@@ -53,7 +55,7 @@ func trySolve(privateKeyA ecdsa.PrivateKey, difficulty big.Int) (*ecdsa.PrivateK
 	return nil, nil
 }
 
-func (s Solver) Solve(solutionCh chan<- Solution) {
+func (s *Solver) Solve(solutionCh chan<- Solution) {
 	var nonce big.Int
 	var privateKeyA *ecdsa.PrivateKey
 	var difficulty big.Int
@@ -70,7 +72,9 @@ func (s Solver) Solve(solutionCh chan<- Solution) {
 			}
 
 			privateKeyB, _ := trySolve(*privateKeyA, difficulty)
+			s.NumTries++
 			if privateKeyB != nil {
+				s.NumSolutions++
 				solutionCh <- Solution{
 					Nonce:       nonce,
 					PrivateKeyA: *privateKeyA,

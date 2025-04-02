@@ -19,14 +19,17 @@ import (
 )
 
 type Submitter struct {
-	pow              PoW.PoW
-	powAddress       common.Address
-	powInstance      bind.BoundContract
-	conn             ethclient.Client
-	chainId          *big.Int
-	privateKey       ecdsa.PrivateKey
-	submitterAddress common.Address
-	nonce            uint64
+	// submitter info
+	Address    common.Address
+	nonce      uint64
+	privateKey ecdsa.PrivateKey
+	conn       ethclient.Client
+
+	// submit contract info
+	chainId     *big.Int
+	powAddress  common.Address
+	pow         PoW.PoW
+	powInstance bind.BoundContract
 }
 
 const gasLimit = uint64(1_000_000)
@@ -46,10 +49,9 @@ func NewSubmitter(conn *ethclient.Client) *Submitter {
 	if err != nil {
 		log.Fatal(err)
 	}
-	submitterAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-	slog.Info("Submitter", "address", submitterAddress)
+	address := crypto.PubkeyToAddress(privateKey.PublicKey)
 
-	nonce, err := conn.PendingNonceAt(context.Background(), submitterAddress)
+	nonce, err := conn.PendingNonceAt(context.Background(), address)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -59,14 +61,14 @@ func NewSubmitter(conn *ethclient.Client) *Submitter {
 	powInstance := pow.Instance(conn, common.HexToAddress(internal.PoWAddress))
 
 	return &Submitter{
-		pow:              pow,
-		powInstance:      *powInstance,
-		powAddress:       powAddress,
-		conn:             *conn,
-		chainId:          chainId,
-		privateKey:       *privateKey,
-		submitterAddress: submitterAddress,
-		nonce:            nonce,
+		Address:     address,
+		nonce:       nonce,
+		privateKey:  *privateKey,
+		conn:        *conn,
+		chainId:     chainId,
+		powAddress:  powAddress,
+		pow:         pow,
+		powInstance: *powInstance,
 	}
 }
 
@@ -88,23 +90,25 @@ func waitForTransactionReceipt(ctx context.Context, c ethclient.Client, txHash c
 	}
 }
 
-func (s *Submitter) Submit(privateKeyB ecdsa.PrivateKey, privateKeyAB ecdsa.PrivateKey) bool {
+func (s *Submitter) GetBalance() (*big.Int, error) {
+	return s.conn.PendingBalanceAt(context.Background(), s.Address)
+}
+
+func (s *Submitter) Submit(privateKeyB ecdsa.PrivateKey, privateKeyAB ecdsa.PrivateKey) (bool, error) {
 	gasPrice, err := s.conn.SuggestGasPrice(context.Background())
 	if err != nil {
-		slog.Error("Can't get gasprice", "error", err)
-		return false
+		return false, err
 	}
 
 	// signature
 	data := common.Hex2Bytes(internal.Data)
 	var packed []byte
-	packed = append(packed, s.submitterAddress.Bytes()...)
+	packed = append(packed, s.Address.Bytes()...)
 	packed = append(packed, data...)
 	digest := crypto.Keccak256([]byte("\x19Ethereum Signed Message:\n32"), crypto.Keccak256(packed))
 	signature, err := crypto.Sign(digest, &privateKeyAB)
 	if err != nil {
-		log.Print("Can't sign message", err)
-		return false
+		return false, err
 	}
 	signature[crypto.RecoveryIDOffset] += 27
 
@@ -118,22 +122,24 @@ func (s *Submitter) Submit(privateKeyB ecdsa.PrivateKey, privateKeyAB ecdsa.Priv
 			GasPrice: gasPrice,
 		},
 		"submit",
-		s.submitterAddress,
+		s.Address,
 		PoW.ECCPoint{X: privateKeyB.PublicKey.X, Y: privateKeyB.PublicKey.Y},
 		signature,
 		data,
 	)
 	if err != nil {
-		log.Print("Can't transact", err)
-		return false
+		return false, err
 	}
 
 	s.nonce++
 	slog.Debug("Submission transaction sended", "tx", tx.Hash())
 
 	receipt, err := waitForTransactionReceipt(context.Background(), s.conn, tx.Hash())
-	if err != nil || receipt.Status == types.ReceiptStatusFailed {
-		return true
+	if err != nil {
+		return false, err
+	}
+	if receipt.Status == types.ReceiptStatusFailed {
+		return true, err
 	}
 
 	for _, log := range receipt.Logs {
@@ -142,8 +148,8 @@ func (s *Submitter) Submit(privateKeyB ecdsa.PrivateKey, privateKeyAB ecdsa.Priv
 		}
 		newProblem, _ := s.pow.UnpackNewProblemEvent(log)
 		if newProblem != nil {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
