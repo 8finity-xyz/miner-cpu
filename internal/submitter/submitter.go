@@ -70,7 +70,7 @@ func NewSubmitter(conn *ethclient.Client) *Submitter {
 }
 
 func waitForTransactionReceipt(ctx context.Context, c ethclient.Client, txHash common.Hash) (*types.Receipt, error) {
-	queryTicker := time.NewTicker(time.Second)
+	queryTicker := time.NewTicker(time.Second / 10)
 	defer queryTicker.Stop()
 
 	for {
