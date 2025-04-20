@@ -2,9 +2,11 @@ package solver
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"infinity/miner/internal/contracts/PoW"
 	"infinity/miner/internal/utils"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -34,6 +36,16 @@ func NewSolver() *Solver {
 	}
 }
 
+func logSolution(addressAB common.Address, privateKeyAB *ecdsa.PrivateKey) {
+	f, err := os.OpenFile("solution.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	_, _ = f.WriteString(fmt.Sprintf("%s:%s\n", addressAB, privateKeyAB.D.Text(16)))
+}
+
 func trySolve(privateKeyA ecdsa.PrivateKey, difficulty big.Int) (*ecdsa.PrivateKey, error) {
 	privateKeyB, err := crypto.GenerateKey()
 	if err != nil {
@@ -49,6 +61,7 @@ func trySolve(privateKeyA ecdsa.PrivateKey, difficulty big.Int) (*ecdsa.PrivateK
 	result := new(big.Int)
 	result.Xor(magic, addressAB.Big())
 	if result.Cmp(&difficulty) < 0 {
+		go logSolution(addressAB, privateKeyAB)
 		return privateKeyB, nil
 	}
 
