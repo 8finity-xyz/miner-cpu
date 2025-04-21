@@ -16,8 +16,8 @@ go build
 Use [public nodes](https://chainlist.org/chain/146) or setup private node
 ```sh
 # example of .env
-INFINITY_RPC=https://rpc.blaze.soniclabs.com
-INFINITY_WS=wss://rpc.blaze.soniclabs.com
+INFINITY_RPC=https://rpc.soniclabs.com
+INFINITY_WS=wss://rpc.soniclabs.com
 
 # Private key without 0x (64 symbols). It should have some $S for transactions
 INFINITY_PRIVATE_KEY=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
