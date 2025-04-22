@@ -4,7 +4,7 @@
 
 2. Clone repo with miner
 ```
-git clone git@github.com:8finity-xyz/miner-cpu.git
+git clone https://github.com/8finity-xyz/miner-cpu.git
 ```
 
 3. Install dependencies and build program
